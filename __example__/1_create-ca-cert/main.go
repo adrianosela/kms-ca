@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"time"
@@ -17,7 +18,7 @@ func main() {
 		log.Fatalf("failed to load AWS SDK config: %v", err)
 	}
 
-	certBytes, err := kmsca.GetSelfSignedCACertificate(
+	caCertData, err := kmsca.GetSelfSignedCACertificate(
 		cfg,
 		"alias/my-ca-certificate-key",
 		pkix.Name{
@@ -25,11 +26,16 @@ func main() {
 			Country:      []string{"CA"},
 			Organization: []string{"Adriano Sela Inc."},
 		},
-		time.Hour*24*365, // valid for 1 year
+		time.Hour*24*365*10, // valid for 10 years
 	)
 	if err != nil {
 		log.Fatalf("failed to get self signed CA certificate: %v", err)
 	}
 
-	fmt.Println(string(certBytes))
+	pemCaCertData := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caCertData,
+	})
+
+	fmt.Println(string(pemCaCertData))
 }
