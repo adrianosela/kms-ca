@@ -68,7 +68,8 @@ func SignCSR(
 		Subject:      csr.Subject,
 		NotBefore:    time.Now().Add(time.Minute * -5), // valid from 5 minutes ago (allow for clock skews)
 		NotAfter:     time.Now().Add(duration),
-		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,               // FIXME
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}, // FIXME
 		// You can add more fields as needed
 	}
 
