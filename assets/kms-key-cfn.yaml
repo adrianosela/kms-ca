@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: KMS Asymmetric Key Creation for CA operations
+
+Resources:
+  CACertKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: "KMS asymmetric key for CA operations"
+      KeyUsage: SIGN_VERIFY
+      KeySpec: RSA_2048
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: "my-ca-certificate-key-policy"
+        Statement:
+        - Sid: "Enable IAM User Permissions"
+          Effect: "Allow"
+          Principal:
+            AWS: 
+              - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+          Action: "kms:*"
+          Resource: "*"
+
+  CACertKeyAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: "alias/my-ca-certificate-key"
+      TargetKeyId: 
+        Ref: "CACertKey"
