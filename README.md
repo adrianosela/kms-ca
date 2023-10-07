@@ -1,10 +1,83 @@
 # kmsca
 
-Utility to generate a (self-signed) CA certificate with a key managed by AWS KMS, and be able to sign CSRs with that CA.
+Utility to run a Certificate Authority (CA) with a key managed by AWS KMS.
 
-When you generate Certificate Authority (CA) certificate using a private key in AWS Key Management Service (KMS), meaning that the private key never leaves KMS and all signing operations for the certificate will also occur within KMS.
+This README will guide you through creating a new (self-signed) CA certificate around a key managed by AWS's Key Management Service (AWS KMS), and be able to issue certificates signed with that CA.
 
-## Step by Step Demo
+When you generate Certificate Authority (CA) certificate using an AWS KMS key, the private key never leaves KMS and all signing operations for the CA will also occur within KMS. This comes with several benefits:
+
+- with KMS the private key cannot be retrieved and thus it cannot be lost or stolen
+- under-the-hood KMS uses a [FIPS 140-2 L3 certified Hardware Security Module (HSM)](https://csrc.nist.gov/projects/cryptographic-module-validation-program/certificate/4523) to store the key
+- all signing operations result in an audit log (via AWS CloudTrail)
+- role based access control for signing operations (via AWS IAM)
+- multiple region high-availability (if using a multi-region KMS key)
+
+AWS also has a private CA service (AWS Private CA). **Using the AWS Private CA service can be prohibitively expensive to smaller organizations depending on their use-case. This is the primary motivation behind this repository**.
+
+<details>
+
+<summary>Example Pricing Comparison</summary>
+
+---
+
+Say your organization issues 100,000 certificates a month.
+
+See: [*AWS Private CA Pricing*](https://aws.amazon.com/private-ca/pricing/) | [*AWS KMS Pricing*](https://aws.amazon.com/kms/pricing/)
+
+There are two operating modes in AWS Private CA. General-purpose mode can issue certificates with any validity period. Short-lived certificate mode can only issue certificates valid for up to 7 days. We'll compare the costs of running a home-grown CA service with KMS against the costs of leveraging Private CA in both short-lived and general-purpose certificates.
+
+#### With AWS Pricate CA in General-Purpose Mode
+
+Itemized costs:
+
+- $400.00 for the CA certificate
+- $750.00 for the first 1,000 signing requests ($0.75*1000)
+- $3150.00 for the next 9,000 signing requests ($0.35*9000)
+- $90.00 for the next 90,000 signing requests ($0.001*90000)
+
+Total: $4390.00
+
+
+#### With AWS Pricate CA in Short-Lived Mode
+
+Itemized costs:
+
+- $50.00 for the CA certificate
+- $5800.00 for 100,000 signing requests ($0.058*100000)
+
+Total: $5850.00
+
+#### Homegrown CA Service with AWS KMS
+
+Itemized costs:
+
+- $1 for the an RSA 2048 key in KMS
+- $0.30 for 100,000 signing requests ($0.03 for every 10,000 requests)... yes you read that right, also the first 20k are free tier
+- ~$12.00 for a t4g.small EC2 instance ($0.0168 per hour for 24 hours * 30 days, ref: [EC2 On-Demand Pricing](https://aws.amazon.com/ec2/pricing/on-demand/)) - you can also get free tier compute)
+- ~0.00 for 5GB of logs ingestion + storage and 10 alarms (CloudWatch free tier, ref: [CloudWatch Pricing](https://aws.amazon.com/cloudwatch/pricing/))
+
+Total: < $15.00
+
+---
+
+</details>
+
+**So it depends on your organization's resources and expertise whether you should pay several thousand dollars for a fully managed CA service, or under $15 for running it yourself.**
+
+This repository serves as a proof-of-concept and starting point for those wishing to run a CA themselves while benefiting from the cheap private key management provided by AWS KMS.
+
+Note that all of the code in this repository is provided as-is. It is your responsibility to understand the code and use it as you see fit.
+
+## Step by Step Guide
+
+### Table of Contents
+
+- [(0) Generate the KMS Key](#0-generate-the-kms-key)
+- [(1) Create a CA certificate from the KMS Key](#1-create-a-ca-certificate-from-the-kms-key)
+- [(2) Generate a Sample Certificate Signing Request (CSR)](#2-generate-a-sample-certificate-signing-request-csr)
+- [(3) Sign the CSR With the CA Certificate's KMS Key](#3-sign-the-sample-certificate-signing-request-csr-with-the-ca-certificates-kms-key)
+- [(4) Using Your Signed Certificate for TLS Authentication](#4-using-your-signed-certificate-for-tls-authentication)
+
 
 ### (0) Generate the KMS Key
 
@@ -29,8 +102,10 @@ Alternatively, you can navigate to the AWS Console > KMS Service > Choose "Creat
 
 ### (1) Create a CA certificate from the KMS Key
 
+Create a new CA Certificate using the test program in [`./__example__/1_create-ca-cert/main.go`](./__example__/1_create-ca-cert/main.go):
+
 ```
-go run __example__/1_create-ca-cert/main.go > ca.pem
+go run __example__/1_create-ca-cert/main.go > ${OUTPUT_CA_CERT_FILENAME}
 ```
 
 <details>
@@ -130,10 +205,10 @@ Certificate:
 
 </details>
 
-### (2) Generate a Sample Certificate Signing Request (CSR)
+You may want to verify the CA certificate using OpenSSL:
 
 ```
-go run __example__/2_create-csr/main.go > csr.pem
+openssl verify -CAfile ${CA_FILENAME} ${CERT_TO_VERIFY_FILENAME}
 ```
 
 <details>
@@ -141,27 +216,27 @@ go run __example__/2_create-csr/main.go > csr.pem
 <summary>Example</summary>
 
 ```
-14:58 $ AWS_PROFILE=demo AWS_REGION=us-east-1 go run __example__/2_create-csr/main.go > csr.pem
+14:00 $ openssl verify -CAfile ca.pem ca.pem
+ca.pem: OK
 ```
 
+</details>
+
+
+### (2) Generate a Sample Certificate Signing Request (CSR)
+
+Create a private key and certificate signing request using the test program in [`./__example__/2_create-csr/main.go`](./__example__/2_create-csr/main.go):
+
 ```
-15:00 $ cat csr.pem
------BEGIN CERTIFICATE REQUEST-----
-MIICgDCCAWgCAQAwOzELMAkGA1UEBhMCVVMxFjAUBgNVBAoTDUV4YW1wbGUsIElu
-Yy4xFDASBgNVBAMTC2V4YW1wbGUuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
-MIIBCgKCAQEAwoCDH/AioxszemzK/yXptE6U02cJ3jB/4l7jbCGnp28KFfSgCO31
-SaNi7yG1w48p0cW/uOorsO0qUyhL6wt52H9CLmbddNH+/ZWxNT3dT17qhbAc6tRT
-vBmLbO9yeTzoYBF5LSRoupndUN7+YsQSu1eEbnsOGjR1xRv9+Ne0q79W3RmaidMU
-ywDmyti9drI4Ol788Ebkcf7VTGzZQ1kHlU7CwF5yHZnDe3g98KG+/sdFrNl9EZWm
-TpOkE3d0PZv5NltVQdVTpKn/VBXreoOMtErW52AK0RP5mAmhg9wkYI6rFwLBUCSB
-gaaSQz3kLZ+07aiTiXOEwn/51IjknnNxoQIDAQABoAAwDQYJKoZIhvcNAQELBQAD
-ggEBAE9hVkn/VXdvLYHZlZQNfT2ORjUGnFY5fgoNY6UoqIYyD48p6MttQiFT1Uzo
-ZwbkDe3dxCOg2v+hdeYkpCadeJKtsJetF+d5ZSmpXbBa4f/o5mW20F2PeKYEexfQ
-eT0c+D0UOQbvtl0iAmWsKlR4Ik0a+8jE5W3v+dYc1XVCB6mdRDzelm5m2MFsiibO
-bszN+YGpIf3Ma1jmNvpSy3BCAe5yVaJIFkLJwv3NW+OgDKRoh/K2SIVtuTYUW66l
-93eSjPBw9FMaZQE3iM3ffr2+d4sAa18hza2oMom/zsC0a8qKwapCJaC8b9Vnocpv
-hC2cRDwvUG2BnxzJ8vOQS45I7XY=
------END CERTIFICATE REQUEST-----
+go run __example__/2_create-csr/main.go ${OUTPUT_PRIVATE_KEY_FILENAME} ${OUTPUT_CSR_FILENAME}
+```
+
+<details>
+
+<summary>Example</summary>
+
+```
+14:58 $ AWS_PROFILE=demo AWS_REGION=us-east-1 go run __example__/2_create-csr/main.go priv.pem csr.pem
 ```
 
 ```
@@ -237,10 +312,12 @@ Certificate Request:
 
 </details>
 
-### (3) Sign the Sample Certificate Signing Request (CSR) with the CA Cert
+### (3) Sign the Sample Certificate Signing Request (CSR) with the CA Certificate's KMS Key
+
+Sign the CSR with the CA's KMS key using the test program in [`./__example__/3_sign-csr/main.go`](./__example__/3_sign-csr/main.go):
 
 ```
-go run __example__/3_sign-csr/main.go ./ca.pem ./csr.pem > signed-cert.pem
+go run __example__/3_sign-csr/main.go ${CA_CERT_FILENAME} ${CSR_FILENAME} > ${SIGNED_CERT_FILENAME}
 ```
 
 <details>
@@ -335,3 +412,69 @@ Certificate:
 ```
 
 </details>
+
+You may want to verify the CA certificate using OpenSSL:
+
+```
+openssl verify -CAfile ${CA_FILENAME} ${CERT_TO_VERIFY_FILENAME}
+```
+
+<details>
+
+<summary>Example</summary>
+
+```
+14:22 $ openssl verify -CAfile ca.pem signed-cert.pem
+signed-cert.pem: OK
+```
+
+</details>
+
+### (4) Using Your Signed Certificate for TLS Authentication
+
+#### (4a) Start the server
+
+Start the TLS server program in [`./__example__/4_demos/tls_server/server/main.go`](./__example__/4_demos/tls_server/server/main.go):
+
+```
+go run __example__/4_demos/tls_server/server/main.go ${PRIVATE_KEY_FILENAME} ${SIGNED_CERT_FILENAME}
+```
+
+<details>
+
+<summary>Example</summary>
+
+```
+14:23 $ go run __example__/4_demos/tls_server/server/main.go priv.pem signed-cert.pem
+
+( server is listening... )
+```
+
+</details>
+
+#### (4b) Start the client
+
+Start the TLS client program in [`./__example__/4_demos/tls_server/client/main.go`](./__example__/4_demos/tls_server/client/main.go):
+
+```
+go run __example__/4_demos/tls_server/client/main.go ${CA_CERT_FILENAME}
+```
+
+<details>
+
+<summary>Example</summary>
+
+```
+14:23 $ go run __example__/tls_client_and_server/client/main.go ca.pem
+
+( client is connected... )
+```
+
+</details>
+
+
+
+
+
+
+

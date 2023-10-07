@@ -25,9 +25,9 @@ func GetSelfSignedCACertificate(
 		Subject:               pkixName,
 		NotBefore:             time.Now().Add(time.Minute * -5), // valid from 5 minutes ago (allow for clock skews)
 		NotAfter:              time.Now().Add(duration),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		IsCA:                  true,
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
 
@@ -65,12 +65,15 @@ func SignCSR(
 
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(rand.Int63()),
-		Subject:      csr.Subject,
 		NotBefore:    time.Now().Add(time.Minute * -5), // valid from 5 minutes ago (allow for clock skews)
 		NotAfter:     time.Now().Add(duration),
-		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,               // FIXME
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}, // FIXME
-		// You can add more fields as needed
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+
+		// fields from CSR
+		Subject:     csr.Subject,
+		IPAddresses: csr.IPAddresses,
+		DNSNames:    csr.DNSNames,
 	}
 
 	// You already have the signer implemented for KMS, so we can reuse that.
