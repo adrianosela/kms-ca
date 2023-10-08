@@ -1,3 +1,5 @@
+github.com/adrianosela/kmssigner v0.0.0-20231008180822-2f4a8eb38e10 h1:jcJ3TfAC+EhH2m1xFfc//E7z0kd6l8E9W9lcWVuz5WE=
+github.com/adrianosela/kmssigner v0.0.0-20231008180822-2f4a8eb38e10/go.mod h1:ycHa1ETPRZOhzDgDzosV52SH48HX8iYdSfPWW95KNxU=
 github.com/aws/aws-sdk-go-v2 v1.21.1 h1:wjHYshtPpYOZm+/mu3NhVgRRc0baM6LJZOmxPZ5Cwzs=
 github.com/aws/aws-sdk-go-v2 v1.21.1/go.mod h1:ErQhvNuEMhJjweavOYhxVkn2RUx7kQXVATHrjKtxIpM=
 github.com/aws/aws-sdk-go-v2/config v1.18.44 h1:U10NQ3OxiY0dGGozmVIENIDnCT0W432PWxk2VO8wGnY=

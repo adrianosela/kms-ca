@@ -481,7 +481,3 @@ You can find more examples under [`./__example__/4_demos/`](./__example__/4_demo
 - [Client Certificates](./__example__/4_demos/client_cert_auth)
 - [MTLS](./__example__/4_demos/mtls) (using the same signed certificate for server and client authentication - in practice each peer would have its own certificate and key)
 
-
-
-
-

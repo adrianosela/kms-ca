@@ -3,6 +3,7 @@ module github.com/adrianosela/kmsca
 go 1.21.0
 
 require (
+	github.com/adrianosela/kmssigner v0.0.0-20231008180822-2f4a8eb38e10
 	github.com/aws/aws-sdk-go-v2 v1.21.1
 	github.com/aws/aws-sdk-go-v2/service/kms v1.24.6
 )

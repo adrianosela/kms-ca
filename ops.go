@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/adrianosela/kmssigner"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 )
@@ -31,7 +33,7 @@ func GetSelfSignedCACertificate(
 		BasicConstraintsValid: true,
 	}
 
-	kmsSigner, err := NewSigner(cfg, kmsKeyId, types.SigningAlgorithmSpecRsassaPkcs1V15Sha256)
+	kmsSigner, err := kmssigner.NewSigner(cfg, kmsKeyId, types.SigningAlgorithmSpecRsassaPkcs1V15Sha256)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize KMS signer: %v", err)
 	}
@@ -77,7 +79,7 @@ func SignCSR(
 	}
 
 	// You already have the signer implemented for KMS, so we can reuse that.
-	kmsSigner, err := NewSigner(cfg, kmsKeyId, types.SigningAlgorithmSpecRsassaPkcs1V15Sha256)
+	kmsSigner, err := kmssigner.NewSigner(cfg, kmsKeyId, types.SigningAlgorithmSpecRsassaPkcs1V15Sha256)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize KMS signer: %v", err)
 	}
