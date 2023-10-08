@@ -4,7 +4,7 @@ Utility to run a Certificate Authority (CA) with a key managed by AWS KMS.
 
 This README will guide you through creating a new (self-signed) CA certificate around a key managed by AWS's Key Management Service (AWS KMS), and be able to issue certificates signed with that CA.
 
-When you generate Certificate Authority (CA) certificate using an AWS KMS key, the private key never leaves KMS and all signing operations for the CA will also occur within KMS. This comes with several benefits:
+Having a Certificate Authority (CA) where the private key is an AWS KMS key, the private key never leaves KMS and all signing operations for the CA will also occur within KMS. This comes with several benefits:
 
 - with KMS the private key cannot be retrieved and thus it cannot be lost or stolen
 - under-the-hood KMS uses a [FIPS 140-2 L3 certified Hardware Security Module (HSM)](https://csrc.nist.gov/projects/cryptographic-module-validation-program/certificate/4523) to store the key
@@ -26,7 +26,7 @@ See: [*AWS Private CA Pricing*](https://aws.amazon.com/private-ca/pricing/) | [*
 
 There are two operating modes in AWS Private CA. General-purpose mode can issue certificates with any validity period. Short-lived certificate mode can only issue certificates valid for up to 7 days. We'll compare the costs of running a home-grown CA service with KMS against the costs of leveraging Private CA in both short-lived and general-purpose certificates.
 
-#### With AWS Pricate CA in General-Purpose Mode
+#### With AWS Private CA in General-Purpose Mode
 
 Itemized costs:
 
@@ -38,7 +38,7 @@ Itemized costs:
 Total: $4390.00
 
 
-#### With AWS Pricate CA in Short-Lived Mode
+#### With AWS Private CA in Short-Lived Mode
 
 Itemized costs:
 
@@ -53,7 +53,7 @@ Itemized costs:
 
 - $1 for the an RSA 2048 key in KMS
 - $0.30 for 100,000 signing requests ($0.03 for every 10,000 requests)... yes you read that right, also the first 20k are free tier
-- ~$12.00 for a t4g.small EC2 instance ($0.0168 per hour for 24 hours * 30 days, ref: [EC2 On-Demand Pricing](https://aws.amazon.com/ec2/pricing/on-demand/)) - you can also get free tier compute)
+- ~$12.00 for a t4g.small EC2 instance ($0.0168 per hour for 24 hours * 30 days, ref: [EC2 On-Demand Pricing](https://aws.amazon.com/ec2/pricing/on-demand/)) - you can also get free tier compute
 - ~0.00 for 5GB of logs ingestion + storage and 10 alarms (CloudWatch free tier, ref: [CloudWatch Pricing](https://aws.amazon.com/cloudwatch/pricing/))
 
 Total: < $15.00
@@ -77,6 +77,7 @@ Note that all of the code in this repository is provided as-is. It is your respo
 - [(2) Generate a Sample Certificate Signing Request (CSR)](#2-generate-a-sample-certificate-signing-request-csr)
 - [(3) Sign the CSR With the CA Certificate's KMS Key](#3-sign-the-sample-certificate-signing-request-csr-with-the-ca-certificates-kms-key)
 - [(4) Using Your Signed Certificate for TLS Authentication](#4-using-your-signed-certificate-for-tls-authentication)
+- [(5) More Examples](#5-more-examples)
 
 
 ### (0) Generate the KMS Key
@@ -473,6 +474,12 @@ go run __example__/4_demos/tls_server/client/main.go ${CA_CERT_FILENAME}
 </details>
 
 
+### (5) More Examples
+
+You can find more examples under [`./__example__/4_demos/`](./__example__/4_demos/):
+
+- [Client Certificates](./__example__/4_demos/client_cert_auth)
+- [MTLS](./__example__/4_demos/mtls) (using the same signed certificate for server and client authentication - in practice each peer would have its own certificate and key)
 
 
 
